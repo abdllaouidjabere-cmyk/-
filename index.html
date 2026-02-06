@@ -4,11 +4,17 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>نرصد - إدارة حضور الطلاب</title>
+    
+    <!-- مكتبة pdfmake -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/pdfmake/0.2.7/pdfmake.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/pdfmake/0.2.7/vfs_fonts.min.js"></script>
+    
+    <!-- خطوط عربية من Google Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Amiri:wght@400;700&family=Cairo:wght@300;400;600;700&family=Tajawal:wght@300;400;500;700&display=swap" rel="stylesheet">
+    
     <style>
-        /* تحميل خطوط عربية مناسبة من Google Fonts */
-        @import url('https://fonts.googleapis.com/css2?family=Cairo:wght@300;400;600;700&display=swap');
-        @import url('https://fonts.googleapis.com/css2?family=Tajawal:wght@300;400;500;700&display=swap');
-        
         /* أنماط عامة */
         :root {
             --primary-color: #2c5aa0;
@@ -25,6 +31,7 @@
             /* خطوط مخصصة */
             --font-heading: 'Cairo', 'Tajawal', sans-serif;
             --font-body: 'Tajawal', 'Cairo', sans-serif;
+            --font-arabic: 'Amiri', 'Cairo', 'Tajawal', sans-serif;
         }
 
         * {
@@ -611,6 +618,60 @@
         .btn-pdf:hover {
             background-color: #b71c1c;
         }
+        
+        /* زر تحميل PDF */
+        .btn-pdf-loading {
+            position: relative;
+            color: transparent !important;
+        }
+        
+        .btn-pdf-loading::after {
+            content: '';
+            position: absolute;
+            width: 20px;
+            height: 20px;
+            top: 50%;
+            left: 50%;
+            margin: -10px 0 0 -10px;
+            border: 2px solid rgba(255, 255, 255, 0.3);
+            border-top-color: white;
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+        }
+        
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+        
+        /* تحسينات إضافية */
+        .student-status {
+            display: inline-block;
+            padding: 4px 12px;
+            border-radius: 4px;
+            font-weight: bold;
+            font-size: 0.9rem;
+        }
+        
+        .status-present-badge {
+            background-color: #e8f5e9;
+            color: var(--success-color);
+        }
+        
+        .status-absent-badge {
+            background-color: #ffebee;
+            color: var(--danger-color);
+        }
+        
+        .status-late-badge {
+            background-color: #fff3e0;
+            color: var(--warning-color);
+        }
+        
+        .status-unmarked-badge {
+            background-color: #f5f5f5;
+            color: #999;
+        }
     </style>
 </head>
 <body>
@@ -776,7 +837,7 @@
                         إنشاء التقرير
                     </button>
                     <button id="export-pdf-btn" class="btn btn-pdf">
-                        تصدير كملف PDF
+                        <span id="export-pdf-text">تصدير كملف PDF</span>
                     </button>
                     <button id="print-report-btn" class="btn btn-warning">
                         طباعة التقرير
@@ -862,12 +923,37 @@
     <!-- رسائل التنبيه -->
     <div id="message-container"></div>
 
-    <!-- مكتبة jsPDF -->
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.5.28/jspdf.plugin.autotable.min.js"></script>
-
     <!-- السكربت الرئيسي -->
     <script>
+        // تعريف الخطوط العربية لـ pdfmake
+        // سنستخدم الخطوط الافتراضية مع إضافة دعم للغة العربية
+        pdfMake.fonts = {
+            Roboto: {
+                normal: 'Roboto-Regular.ttf',
+                bold: 'Roboto-Medium.ttf',
+                italics: 'Roboto-Italic.ttf',
+                bolditalics: 'Roboto-MediumItalic.ttf'
+            },
+            Amiri: {
+                normal: 'https://cdn.jsdelivr.net/npm/amiri-font@0.0.2/amiri-regular.ttf',
+                bold: 'https://cdn.jsdelivr.net/npm/amiri-font@0.0.2/amiri-bold.ttf',
+                italics: 'https://cdn.jsdelivr.net/npm/amiri-font@0.0.2/amiri-regular.ttf',
+                bolditalics: 'https://cdn.jsdelivr.net/npm/amiri-font@0.0.2/amiri-bold.ttf'
+            },
+            Cairo: {
+                normal: 'https://fonts.gstatic.com/s/cairo/v28/SLXgc1nY6HkvangtZmpcWmhzfH5l2WgsQSaQ.woff2',
+                bold: 'https://fonts.gstatic.com/s/cairo/v28/SLXgc1nY6HkvangtZmpcWmhzfH5l2WgsQSaQ.woff2',
+                italics: 'https://fonts.gstatic.com/s/cairo/v28/SLXgc1nY6HkvangtZmpcWmhzfH5l2WgsQSaQ.woff2',
+                bolditalics: 'https://fonts.gstatic.com/s/cairo/v28/SLXgc1nY6HkvangtZmpcWmhzfH5l2WgsQSaQ.woff2'
+            },
+            Tajawal: {
+                normal: 'https://fonts.gstatic.com/s/tajawal/v9/Iura6YBj_oCad4k1rzaLCr5Ihyo.woff2',
+                bold: 'https://fonts.gstatic.com/s/tajawal/v9/Iura6YBj_oCad4k1rzaLCr5Ihyo.woff2',
+                italics: 'https://fonts.gstatic.com/s/tajawal/v9/Iura6YBj_oCad4k1rzaLCr5Ihyo.woff2',
+                bolditalics: 'https://fonts.gstatic.com/s/tajawal/v9/Iura6YBj_oCad4k1rzaLCr5Ihyo.woff2'
+            }
+        };
+
         // بيانات التطبيق
         const appData = {
             students: JSON.parse(localStorage.getItem('nrasad_students')) || [],
@@ -1235,10 +1321,10 @@
                 generateReport(reportDate);
             });
             
-            // زر تصدير PDF
+            // زر تصدير PDF باستخدام pdfmake
             document.getElementById('export-pdf-btn').addEventListener('click', function() {
                 const reportDate = document.getElementById('report-date').value;
-                exportToPDF(reportDate);
+                exportToPdfMake(reportDate);
             });
             
             // زر طباعة التقرير
@@ -1408,172 +1494,411 @@
             reportResults.style.display = 'block';
         }
 
-        // تصدير التقرير كملف PDF
-        function exportToPDF(date) {
-            const reportDate = date || appData.currentDate;
-            const attendanceData = appData.attendance[reportDate] || {};
+        // ============================================
+        // دالات إنشاء PDF باستخدام pdfmake
+        // ============================================
+
+        // دالة لتحويل التاريخ الميلادي إلى هجري (تقريبي)
+        function convertToHijri(gregorianDate) {
+            const hijriAdjust = -579;
+            const gregorianYear = gregorianDate.getFullYear();
+            const hijriYear = Math.floor((gregorianYear - 622) * 33 / 32) + hijriAdjust;
             
-            if (Object.keys(attendanceData).length === 0) {
-                showMessage('لا توجد بيانات للتاريخ المحدد', 'error');
-                return;
+            const hijriMonths = [
+                'محرم', 'صفر', 'ربيع الأول', 'ربيع الآخر', 'جمادى الأولى', 'جمادى الآخرة',
+                'رجب', 'شعبان', 'رمضان', 'شوال', 'ذو القعدة', 'ذو الحجة'
+            ];
+            
+            const monthIndex = gregorianDate.getMonth();
+            const day = gregorianDate.getDate();
+            
+            // تحويل تقريبي
+            let hijriDay = day;
+            let hijriMonthIndex = monthIndex;
+            
+            hijriDay -= 2;
+            if (hijriDay < 1) {
+                hijriMonthIndex--;
+                if (hijriMonthIndex < 0) {
+                    hijriMonthIndex = 11;
+                }
+                hijriDay += 30;
             }
             
-            // حساب الإحصائيات
-            let presentCount = 0;
-            let absentCount = 0;
-            let lateCount = 0;
-            const absentStudents = [];
-            const lateStudents = [];
-            const allStudents = [];
-            
-            // جمع البيانات
-            appData.students.forEach(student => {
-                const status = attendanceData[student.id] || 'unmarked';
-                let statusText = '';
-                
-                switch(status) {
-                    case 'present': 
-                        statusText = 'حاضر';
-                        presentCount++;
-                        break;
-                    case 'absent': 
-                        statusText = 'غائب';
-                        absentCount++;
-                        absentStudents.push({name: student.name, class: student.class});
-                        break;
-                    case 'late': 
-                        statusText = 'متأخر';
-                        lateCount++;
-                        lateStudents.push({name: student.name, class: student.class});
-                        break;
-                    default: 
-                        statusText = 'لم يتم التسجيل';
-                }
-                
-                allStudents.push({
-                    name: student.name,
-                    class: student.class,
-                    id: student.id || '---',
-                    status: statusText
-                });
-            });
-            
-            // تنسيق التاريخ
-            const reportDateObj = new Date(reportDate);
-            const formattedReportDate = reportDateObj.toLocaleDateString('ar-SA', {
-                weekday: 'long',
-                year: 'numeric',
-                month: 'long',
-                day: 'numeric'
-            });
-            
+            return `${hijriDay} ${hijriMonths[hijriMonthIndex]} ${hijriYear} هـ`;
+        }
+
+        // دالة تصدير PDF باستخدام pdfmake
+        async function exportToPdfMake(date) {
             try {
-                // إنشاء مستند PDF
-                const { jsPDF } = window.jspdf;
-                const doc = new jsPDF({
-                    orientation: 'portrait',
-                    unit: 'mm',
-                    format: 'a4'
-                });
+                const reportDate = date || appData.currentDate;
+                const attendanceData = appData.attendance[reportDate] || {};
                 
-                // إعدادات الخط
-                doc.setFont("times", "normal");
-                doc.setFontSize(22);
-                
-                // عنوان التقرير
-                doc.text("تقرير حضور الطلاب", 105, 20, { align: "center" });
-                doc.setFontSize(16);
-                doc.text(`تاريخ التقرير: ${formattedReportDate}`, 105, 30, { align: "center" });
-                
-                // إحصائيات التقرير
-                doc.setFontSize(14);
-                doc.text("إحصائيات التقرير", 20, 45);
-                
-                doc.setFontSize(12);
-                doc.text(`عدد الحاضرين: ${presentCount}`, 30, 55);
-                doc.text(`عدد الغائبين: ${absentCount}`, 30, 62);
-                doc.text(`عدد المتأخرين: ${lateCount}`, 30, 69);
-                
-                // جدول الطلاب
-                doc.setFontSize(14);
-                doc.text("تفاصيل حضور الطلاب", 20, 85);
-                
-                // تحضير بيانات الجدول
-                const tableData = allStudents.map(student => [
-                    student.name,
-                    student.class,
-                    student.id,
-                    student.status
-                ]);
-                
-                // إضافة الجدول
-                doc.autoTable({
-                    startY: 90,
-                    head: [['اسم الطالب', 'الصف / الشعبة', 'رقم الهوية', 'حالة الحضور']],
-                    body: tableData,
-                    theme: 'grid',
-                    headStyles: { fillColor: [44, 90, 160] },
-                    styles: { font: "times", fontSize: 10, cellPadding: 3 },
-                    columnStyles: {
-                        0: { cellWidth: 50 },
-                        1: { cellWidth: 40 },
-                        2: { cellWidth: 30 },
-                        3: { cellWidth: 30 }
-                    },
-                    margin: { right: 20 }
-                });
-                
-                // قائمة الغائبين والمتأخرين (إذا كان هناك مساحة)
-                let finalY = doc.lastAutoTable.finalY + 10;
-                
-                if (finalY < 250) {
-                    doc.setFontSize(14);
-                    doc.text("الطلاب الغائبين", 20, finalY);
-                    doc.setFontSize(12);
-                    
-                    let yPos = finalY + 10;
-                    absentStudents.forEach((student, index) => {
-                        if (yPos < 280) {
-                            doc.text(`${index + 1}. ${student.name} - ${student.class}`, 25, yPos);
-                            yPos += 7;
-                        }
-                    });
-                    
-                    if (absentStudents.length === 0) {
-                        doc.text("لا يوجد غائبين", 25, yPos);
-                        yPos += 7;
-                    }
-                    
-                    doc.setFontSize(14);
-                    doc.text("الطلاب المتأخرين", 110, finalY);
-                    doc.setFontSize(12);
-                    
-                    yPos = finalY + 10;
-                    lateStudents.forEach((student, index) => {
-                        if (yPos < 280) {
-                            doc.text(`${index + 1}. ${student.name} - ${student.class}`, 115, yPos);
-                            yPos += 7;
-                        }
-                    });
-                    
-                    if (lateStudents.length === 0) {
-                        doc.text("لا يوجد متأخرين", 115, yPos);
-                    }
+                if (Object.keys(attendanceData).length === 0) {
+                    showMessage('لا توجد بيانات للتاريخ المحدد', 'error');
+                    return;
                 }
                 
-                // تذييل الصفحة
-                doc.setFontSize(10);
-                doc.setTextColor(100);
-                doc.text("تم إنشاء هذا التقرير بواسطة منصة 'نرصد' لإدارة حضور الطلاب", 105, 285, { align: "center" });
-                doc.text(`تاريخ الإنشاء: ${new Date().toLocaleDateString('ar-SA')}`, 105, 290, { align: "center" });
+                // تغيير حالة زر التصدير لإظهار التحميل
+                const exportBtn = document.getElementById('export-pdf-btn');
+                const exportBtnText = document.getElementById('export-pdf-text');
+                const originalText = exportBtnText.textContent;
+                exportBtnText.textContent = 'جاري التصدير...';
+                exportBtn.classList.add('btn-pdf-loading');
+                exportBtn.disabled = true;
                 
-                // حفظ الملف
-                doc.save(`تقرير_حضور_${reportDate}.pdf`);
+                // تنسيق التاريخ
+                const reportDateObj = new Date(reportDate);
+                const arabicMonths = [
+                    'يناير', 'فبراير', 'مارس', 'أبريل', 'مايو', 'يونيو',
+                    'يوليو', 'أغسطس', 'سبتمبر', 'أكتوبر', 'نوفمبر', 'ديسمبر'
+                ];
+                
+                const formattedDate = `${reportDateObj.getDate()} ${arabicMonths[reportDateObj.getMonth()]} ${reportDateObj.getFullYear()}`;
+                const hijriDate = convertToHijri(reportDateObj);
+                
+                // حساب الإحصائيات
+                let presentCount = 0, absentCount = 0, lateCount = 0;
+                const absentStudents = [], lateStudents = [];
+                
+                appData.students.forEach(student => {
+                    const status = attendanceData[student.id] || 'unmarked';
+                    if (status === 'present') presentCount++;
+                    else if (status === 'absent') {
+                        absentCount++;
+                        absentStudents.push(student);
+                    } else if (status === 'late') {
+                        lateCount++;
+                        lateStudents.push(student);
+                    }
+                });
+                
+                // إعداد بيانات الجدول
+                const tableBody = [
+                    // رأس الجدول
+                    [
+                        { text: 'م', style: 'tableHeader', alignment: 'center' },
+                        { text: 'اسم الطالب', style: 'tableHeader', alignment: 'right' },
+                        { text: 'الصف / الشعبة', style: 'tableHeader', alignment: 'right' },
+                        { text: 'رقم الهوية', style: 'tableHeader', alignment: 'right' },
+                        { text: 'حالة الحضور', style: 'tableHeader', alignment: 'right' }
+                    ]
+                ];
+                
+                // إضافة بيانات الطلاب
+                appData.students.forEach((student, index) => {
+                    const status = attendanceData[student.id] || 'unmarked';
+                    let statusText = '', statusColor = 'black';
+                    
+                    switch(status) {
+                        case 'present': 
+                            statusText = 'حاضر';
+                            statusColor = '#4CAF50';
+                            break;
+                        case 'absent': 
+                            statusText = 'غائب';
+                            statusColor = '#f44336';
+                            break;
+                        case 'late': 
+                            statusText = 'متأخر';
+                            statusColor = '#ff9800';
+                            break;
+                        default: 
+                            statusText = 'لم يتم التسجيل';
+                            statusColor = '#999999';
+                    }
+                    
+                    tableBody.push([
+                        { text: (index + 1).toString(), alignment: 'center' },
+                        { text: student.name, alignment: 'right' },
+                        { text: student.class, alignment: 'right' },
+                        { text: student.id || '-', alignment: 'right' },
+                        { 
+                            text: statusText, 
+                            alignment: 'right',
+                            color: statusColor,
+                            bold: true
+                        }
+                    ]);
+                });
+                
+                // تعريف مستند PDF
+                const docDefinition = {
+                    // إعدادات الصفحة
+                    pageSize: 'A4',
+                    pageOrientation: 'portrait',
+                    pageMargins: [40, 60, 40, 60],
+                    
+                    // المحتوى
+                    content: [
+                        // العنوان الرئيسي
+                        {
+                            text: 'تقرير حضور الطلاب',
+                            style: 'header',
+                            alignment: 'center',
+                            margin: [0, 0, 0, 10]
+                        },
+                        
+                        // تاريخ التقرير
+                        {
+                            text: `تاريخ التقرير: ${formattedDate}`,
+                            style: 'subheader',
+                            alignment: 'center',
+                            margin: [0, 0, 0, 5]
+                        },
+                        
+                        {
+                            text: `(التاريخ الهجري: ${hijriDate})`,
+                            style: 'smallText',
+                            alignment: 'center',
+                            margin: [0, 0, 0, 20]
+                        },
+                        
+                        // الإحصائيات
+                        {
+                            text: 'إحصائيات التقرير',
+                            style: 'sectionHeader',
+                            margin: [0, 0, 0, 15]
+                        },
+                        
+                        {
+                            columns: [
+                                {
+                                    width: '*',
+                                    stack: [
+                                        {
+                                            text: presentCount.toString(),
+                                            style: 'counterNumber',
+                                            color: '#4CAF50',
+                                            alignment: 'center'
+                                        },
+                                        {
+                                            text: 'الحاضرون',
+                                            style: 'counterLabel',
+                                            alignment: 'center'
+                                        }
+                                    ]
+                                },
+                                {
+                                    width: '*',
+                                    stack: [
+                                        {
+                                            text: absentCount.toString(),
+                                            style: 'counterNumber',
+                                            color: '#f44336',
+                                            alignment: 'center'
+                                        },
+                                        {
+                                            text: 'الغائبون',
+                                            style: 'counterLabel',
+                                            alignment: 'center'
+                                        }
+                                    ]
+                                },
+                                {
+                                    width: '*',
+                                    stack: [
+                                        {
+                                            text: lateCount.toString(),
+                                            style: 'counterNumber',
+                                            color: '#ff9800',
+                                            alignment: 'center'
+                                        },
+                                        {
+                                            text: 'المتأخرون',
+                                            style: 'counterLabel',
+                                            alignment: 'center'
+                                        }
+                                    ]
+                                }
+                            ],
+                            columnGap: 10,
+                            margin: [0, 0, 0, 30]
+                        },
+                        
+                        // جدول تفاصيل الطلاب
+                        {
+                            text: 'تفاصيل حضور الطلاب',
+                            style: 'sectionHeader',
+                            margin: [0, 0, 0, 15]
+                        },
+                        
+                        {
+                            table: {
+                                headerRows: 1,
+                                widths: [20, '*', 80, 60, 60],
+                                body: tableBody
+                            },
+                            layout: {
+                                hLineWidth: function(i, node) {
+                                    return (i === 0 || i === node.table.body.length) ? 1 : 0.5;
+                                },
+                                vLineWidth: function(i, node) {
+                                    return 0.5;
+                                },
+                                hLineColor: function(i, node) {
+                                    return (i === 0 || i === node.table.body.length) ? '#2c5aa0' : '#cccccc';
+                                },
+                                vLineColor: function(i, node) {
+                                    return '#cccccc';
+                                },
+                                fillColor: function(i, node) {
+                                    return (i === 0) ? '#f0f5ff' : null;
+                                }
+                            }
+                        },
+                        
+                        // قوائم الغائبين والمتأخرين
+                        {
+                            columns: [
+                                {
+                                    width: '*',
+                                    stack: [
+                                        {
+                                            text: 'قائمة الغائبين',
+                                            style: 'listHeader',
+                                            color: '#f44336',
+                                            margin: [0, 30, 0, 10]
+                                        },
+                                        {
+                                            text: absentStudents.length > 0 ? 
+                                                absentStudents.map((student, index) => 
+                                                    `${index + 1}. ${student.name} - ${student.class}`
+                                                ).join('\n') : 'لا يوجد غائبين',
+                                            style: 'listContent'
+                                        }
+                                    ]
+                                },
+                                {
+                                    width: '*',
+                                    stack: [
+                                        {
+                                            text: 'قائمة المتأخرين',
+                                            style: 'listHeader',
+                                            color: '#ff9800',
+                                            margin: [0, 30, 0, 10]
+                                        },
+                                        {
+                                            text: lateStudents.length > 0 ? 
+                                                lateStudents.map((student, index) => 
+                                                    `${index + 1}. ${student.name} - ${student.class}`
+                                                ).join('\n') : 'لا يوجد متأخرين',
+                                            style: 'listContent'
+                                        }
+                                    ]
+                                }
+                            ],
+                            columnGap: 20
+                        },
+                        
+                        // تذييل الصفحة
+                        {
+                            text: '\n\n',
+                            margin: [0, 20, 0, 0]
+                        },
+                        
+                        {
+                            text: 'تم إنشاء هذا التقرير بواسطة منصة "نرصد" لإدارة حضور الطلاب',
+                            style: 'footerText',
+                            alignment: 'center',
+                            margin: [0, 20, 0, 5]
+                        },
+                        
+                        {
+                            text: `تاريخ الإنشاء: ${new Date().toLocaleDateString('ar-SA')}`,
+                            style: 'smallText',
+                            alignment: 'center'
+                        }
+                    ],
+                    
+                    // الأنماط
+                    styles: {
+                        header: {
+                            fontSize: 22,
+                            bold: true,
+                            color: '#2c5aa0',
+                            font: 'Cairo'
+                        },
+                        subheader: {
+                            fontSize: 16,
+                            bold: true,
+                            color: '#555555',
+                            font: 'Cairo'
+                        },
+                        sectionHeader: {
+                            fontSize: 14,
+                            bold: true,
+                            color: '#333333',
+                            font: 'Cairo'
+                        },
+                        tableHeader: {
+                            fontSize: 10,
+                            bold: true,
+                            color: '#2c5aa0',
+                            font: 'Cairo'
+                        },
+                        counterNumber: {
+                            fontSize: 28,
+                            bold: true,
+                            font: 'Cairo'
+                        },
+                        counterLabel: {
+                            fontSize: 12,
+                            bold: true,
+                            color: '#555555',
+                            font: 'Cairo'
+                        },
+                        listHeader: {
+                            fontSize: 12,
+                            bold: true,
+                            font: 'Cairo'
+                        },
+                        listContent: {
+                            fontSize: 10,
+                            font: 'Cairo'
+                        },
+                        footerText: {
+                            fontSize: 10,
+                            color: '#777777',
+                            font: 'Cairo'
+                        },
+                        smallText: {
+                            fontSize: 9,
+                            color: '#999999',
+                            font: 'Cairo'
+                        }
+                    },
+                    
+                    // الإعدادات الافتراضية - استخدم خط يدعم العربية
+                    defaultStyle: {
+                        font: 'Cairo',
+                        fontSize: 10,
+                        alignment: 'right'
+                    }
+                };
+                
+                // إنشاء وتنزيل ملف PDF
+                pdfMake.createPdf(docDefinition).download(`تقرير_حضور_${reportDate}.pdf`);
+                
+                // استعادة حالة زر التصدير
+                setTimeout(() => {
+                    exportBtnText.textContent = originalText;
+                    exportBtn.classList.remove('btn-pdf-loading');
+                    exportBtn.disabled = false;
+                }, 1000);
                 
                 showMessage('تم تصدير التقرير كملف PDF بنجاح', 'success');
+                
             } catch (error) {
-                console.error('خطأ في تصدير PDF:', error);
+                console.error('خطأ في تصدير تقرير PDF:', error);
                 showMessage('حدث خطأ أثناء تصدير ملف PDF', 'error');
+                
+                // استعادة حالة زر التصدير في حالة الخطأ
+                const exportBtn = document.getElementById('export-pdf-btn');
+                const exportBtnText = document.getElementById('export-pdf-text');
+                exportBtnText.textContent = 'تصدير كملف PDF';
+                exportBtn.classList.remove('btn-pdf-loading');
+                exportBtn.disabled = false;
             }
         }
 
